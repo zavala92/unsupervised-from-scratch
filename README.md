@@ -127,4 +127,4 @@ value of them is in the attempt, and none of it survives a copy and paste.
 
 ## Licence
 
-MIT, see [LICENSE](LICENSE).
+ [LICENSE](LICENSE).
