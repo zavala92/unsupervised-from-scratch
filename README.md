@@ -1,2 +1,130 @@
-# unsupervised-from-scratch
-Description: From-scratch K-means and Gaussian anomaly detection in numpy, with an              11-page write-up and experiments on where each one breaks. Topics: machine-learning, clustering, kmeans, anomaly-detection, numpy,         density-estimation, from-scratch
+# Unsupervised Learning: K-means and Anomaly Detection
+
+Notes and from-scratch implementations written while working through the
+[Machine Learning Specialization](https://www.coursera.org/specializations/machine-learning-introduction)
+by [DeepLearning.AI](https://www.deeplearning.ai/) on Coursera, specifically
+the unsupervised learning material in Course 3.
+
+The aim was to understand the two algorithms well enough to rebuild them, then
+to push past the lectures and find out where they actually break. Everything
+here is numpy and matplotlib only. No scipy, no scikit-learn, no pytest.
+
+## What is here
+
+| | |
+|---|---|
+| [`notes/`](notes/) | An 11-page write-up of both algorithms, with ten figures. Build it or read the PDF. |
+| [`kmeans/`](kmeans/) | K-means, its test suite, and a colour-quantisation demo. |
+| [`anomaly-detection/`](anomaly-detection/) | A six-stage project: function stubs, 21 tests, and experiments that each break the detector in a different way. |
+
+Start with the notes. The code is where the claims in them come from.
+
+## The notes
+
+[`notes/unsupervised-learning-notes.pdf`](notes/unsupervised-learning-notes.pdf)
+
+**Part I, clustering.** The two steps, the distortion objective and why the
+iteration converges, local optima and why restarts are mandatory, choosing K
+and why the elbow method often has nothing to find, and image compression by
+colour quantisation.
+
+**Part II, anomaly detection.** Density estimation and the threshold rule,
+evaluating with precision/recall/F1 instead of accuracy, when to prefer this
+over supervised learning, feature transformation, numerical underflow, and
+what the independence assumption costs.
+
+Every figure and every table was produced by running the code in this
+repository. To rebuild:
+
+```bash
+cd notes
+python3 make_figs.py        # regenerates all ten figures
+latexmk -pdf notes.tex
+```
+
+## K-means
+
+```bash
+cd kmeans
+python3 test_kmeans.py                  # 11 tests
+python3 compress_image.py               # bundled photo, K = 16
+python3 compress_image.py photo.jpg 8   # your own image
+```
+
+`kmeans.py` keeps the two steps as separate functions, because they are
+separate ideas: one minimises the distortion over the assignments, the other
+over the centroid positions. The test suite checks the property that matters
+most in practice, which is that the distortion never increases at any
+half-step, and it checks that some restarts really do get stuck in worse local
+optima.
+
+The compression demo reduces a 76,174-colour photograph to 16 colours,
+7,372,800 bits down to 1,229,184, a factor of 6.
+
+## Anomaly detection
+
+Nine functions to implement, with a test suite that reports an unwritten
+function as `TODO` rather than as a failure, so the summary line doubles as a
+progress bar.
+
+```bash
+cd anomaly-detection
+python3 tests/run_tests.py              # all TODO at the start
+python3 stages/stage1_density_1d.py     # each stage prints a narrative and a figure
+```
+
+Set `ANOMDET_USE_REFERENCE=1` to run any stage against the reference
+implementation, which is useful for seeing what a stage produces before
+writing the code for it.
+
+Some of what the stages establish:
+
+* A log-normal feature carrying **no anomaly signal at all** still drags
+  precision from 1.00 to 0.61, because a Gaussian fitted to it puts 11% of its
+  mass on negative values and then rates honest tail points as bigger outliers
+  than genuinely broken ones.
+* `p(x)` is a product of n densities, so it underflows to exactly `0.0` at
+  around n = 520. Past that, `p < epsilon` is true for everything and the
+  detector flags 100% of the data while looking like a tuning problem.
+* On correlated data where every anomaly sits within 2.1 standard deviations
+  of the mean in *every* coordinate, switching from a diagonal covariance to a
+  full one takes test F1 from 0.217 to 1.000.
+* In the capstone, a full covariance matrix on the raw features buys
+  *nothing*, because the real relationship is `iters ~ log(cond)`, which is not
+  linear until you transform. The two fixes only pay off together.
+
+See [`anomaly-detection/README.md`](anomaly-detection/README.md) for the stage
+by stage breakdown.
+
+## Requirements
+
+Python 3.9 or later, numpy, matplotlib. A LaTeX installation if you want to
+rebuild the notes rather than read the committed PDF.
+
+```bash
+pip install -r requirements.txt
+```
+
+## A note on the course
+
+This repository is my own write-up and my own implementations. It deliberately
+contains none of the course material: no notebook cells, no assignment
+scaffolding, no autograder code, no course datasets. The data are generated by
+`anomdet/data.py` and by the test fixtures in `kmeans/`.
+
+The public API here is also deliberately not the assignment API. No function
+in this repository shares a name or a signature with a graded exercise. What
+is here is a library with a different shape, built around a different question
+(`fit_independent` against `fit_correlated`, log-densities throughout, a
+threshold search in log space), wrapped in a test suite and a set of
+experiments the course does not contain.
+
+That distinction matters to me. The underlying mathematics is textbook
+material and appears in hundreds of public repositories, but a graded
+assignment's solution belongs to the learner who is meant to write it. If you
+are taking the specialization, write the exercises yourself first. The entire
+value of them is in the attempt, and none of it survives a copy and paste.
+
+## Licence
+
+MIT, see [LICENSE](LICENSE).
